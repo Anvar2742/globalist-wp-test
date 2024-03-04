@@ -1,5 +1,9 @@
 <?php
 
+
+require_once dirname($_SERVER['DOCUMENT_ROOT']) . '/vendor/autoload.php';
+
+
 add_action('init', __NAMESPACE__ . '\\register_post_type_event', 10);
 add_action('init', __NAMESPACE__ . '\\register_post_type_registration', 10);
 
@@ -50,6 +54,39 @@ function register_post_type_event()
                 $sql_query = $wpdb->prepare("SELECT COUNT(`post_id`) as count FROM %i WHERE `meta_key` = 'registration_event_id' AND `meta_value` = %d", $wpdb->postmeta, $post_id);
                 $result = $wpdb->get_row($sql_query, ARRAY_A);
                 echo $result['count'];
+            }],
+            'export' => ['title' => 'Export', 'sortable' => false, 'function' => function () {
+                global $post;
+                $post_id = $post->ID;
+                ?>
+                    <button onclick="exportData(event, <?= $post_id ?>)">Export Data</button>
+
+                    <script>
+                        function exportData(event, postId) {
+                            event.preventDefault();
+                            
+                            var xhr = new XMLHttpRequest();
+                            xhr.open('GET', "admin-ajax.php" + '?action=generate_file&post_id='+ postId, true);
+                            xhr.setRequestHeader('Content-Type', 'application/json');
+                            xhr.responseType = "blob";
+                            xhr.onload = function() {
+                                if (xhr.status === 200) {
+                                    var fileName = xhr.getResponseHeader('X-File-Name');
+                                    var downloadLink = document.createElement('a');
+                                    downloadLink.href = window.URL.createObjectURL(xhr.response);
+                                    downloadLink.download = fileName;
+                                    downloadLink.click();
+                                }
+                            };
+
+                            xhr.onerror = function() {
+                                console.error('Error generating file: ' + xhr);
+                                alert('Erreur lors de la génération du fichier. Veuillez réessayer plus tard.');
+                            };
+                            xhr.send();
+                        }
+                    </script>
+                <?php
             }],
         ],
         'admin_filters'        => [],
